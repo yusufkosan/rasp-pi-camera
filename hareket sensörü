@@ -1,0 +1,90 @@
+#!/usr/bin/python
+
+import RPi.GPIO as GPIO
+import time
+import smtplib
+
+import os
+
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+
+
+from email.MIMEMultipart import MIMEMultipart 
+from email.MIMEImage import MIMEImage 
+from email.MIMEText import MIMEText 
+from email.Utils import COMMASPACE, formatdate 
+from email import Encoders 
+import picamera
+import subprocess
+def sendEmail():
+  camera = picamera.PiCamera()
+  camera.resolution = (1920, 1080)
+
+# time.sleep(2)
+  camera.capture('image1.jpg')
+
+  camera.close()
+  username = "deneme@gmail.com"             # arkadaslar mail adreslerini degistirmeyi unutmayiniz :)
+  password = "123456"
+  COMMASPACE = ','
+  message = MIMEMultipart()
+  message['Subject'] = 'Hareket Algilandi'
+  me = 'mustafaergul@gmail.com'                 # arkadaslar mail adreslerini degistirmeyi unutmayiniz :)
+  receivers= 'mustafaergul@gmail.com'
+  message['From'] = me
+  message['To'] = COMMASPACE.join(receivers)
+  message.preamble = 'Hareket'
+  fp = open('image1.jpg', 'rb').read()
+  img = MIMEImage(fp, name=os.path.basename('image1.jpg'))
+  
+  message.attach(img)
+  try:
+    server = smtplib.SMTP("smtp.gmail.com", 587) #portu mail servis saglayaciniza gore degistirirsiniz.
+    server.ehlo()
+    server.starttls()
+    server.login(username,password)
+    server.sendmail(me, receivers, message.as_string())
+    server.close()
+    print 'mail gonderildi'
+  except:
+    print "mail gonderilemedi"
+
+GPIO.setmode(GPIO.BCM)
+
+GPIO_PIR = 7
+print "Hareket Modulu Test Ediliyor (cikmak icin CTRL-C)"
+
+GPIO.setup(GPIO_PIR,GPIO.IN)      # Echo
+
+Current_State  = 0
+Previous_State = 0
+
+try:
+
+  print "Hareket Sensoru Calismak icin hazir ..."
+
+  while GPIO.input(GPIO_PIR)==1:
+    Current_State  = 0    
+
+  print "  Hazir"     
+    
+  while True :
+   
+    # Hareket Sensorunun Calisma Algoritmasi
+    Current_State = GPIO.input(GPIO_PIR)
+   
+    if Current_State==1 and Previous_State==0:
+      print "  Hareket Algilandi!"	 
+      sendEmail()
+      Previous_State=1
+    elif Current_State==0 and Previous_State==1:
+      print "  Hazir"
+      Previous_State=0
+      
+    time.sleep(0.01)      
+      
+except KeyboardInterrupt:
+  print "  Cikis" 
+  GPIO.cleanup()
